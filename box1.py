@@ -81,11 +81,11 @@ class Base(BaseShape):
 
             for point in list_points:
                 if prev_point:
-                    drawing.add(dxf.line(prev_point, point, thickness = 2, color= 1))
+                    drawing.add(dxf.line(prev_point, point, thickness=2, color=1))
                     print(prev_point,point)
                 prev_point = point
 
-        drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=2,color=1))
+        drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=2, color=1))
 
         os.chmod(deskTop + 'output.dxf', stat.S_IWRITE)
         drawing.save()
@@ -148,7 +148,7 @@ class Side_side(BaseShape):
         self.baseObject = baseObject
 
         self.bottomNotchLength = baseObject.depression_side
-        self.bottomNotchNumber = baseObject.numberNotchSide
+        self.bottomNotchNumber = baseObject.numberNotchSide + 1
 
         self.mat_thickness = baseObject.mat_thickness
 
@@ -211,7 +211,7 @@ def segment_creator_base(direction,depress_bottom, depress_side, num_notch_botto
             ret.append(next_point)
             next_point = (next_point[0] + length_bottom_notch, next_point[1])         # go right * length of notch
             ret.append(next_point)
-            next_point = (next_point[0], next_point[1] + notch_thickness)      # go up
+            next_point = (next_point[0], next_point[1] + notch_thickness)      # go upz
             ret.append(next_point)
             next_point = (next_point[0] + half_depress_bottom, next_point[1])  # go right
             ret.append(next_point)
@@ -287,7 +287,9 @@ base.add_notch(4, 30, 4, 50)
 
 base.save()
 
+base.create_part_side()
 
+side1 = base.piece_side1
 
 
 
