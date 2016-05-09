@@ -22,23 +22,19 @@ class BaseShape:
         def save_desktop(self):
             prev_point = None
             drawing = dxf.drawing(deskTop + 'output.dxf')
-            print(self.all_points)
-            print()
 
             for list_points in self.all_points:
-                print('start corner', len(list_points))
 
                 for point in list_points:
                     if prev_point:
                         drawing.add(dxf.line(prev_point, point, thickness = 2, color= 1))
-                        print(prev_point,point)
                     prev_point = point
 
             drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=2,color=1))
 
-            os.chmod(deskTop + 'output.dxf', stat.S_IWRITE)
+            #os.chmod(deskTop + 'output.dxf', stat.S_IWRITE)
             drawing.save()
-            os.chmod(deskTop + 'output.dxf', stat.S_IREAD)
+#            os.chmod(deskTop + 'output.dxf', stat.S_IREAD)
 
 
 class Base(BaseShape):
@@ -61,8 +57,6 @@ class Base(BaseShape):
         self.piece_bottom = None
         self.piece_side = None
 
-        print(self.all_points)
-
         # self.all_points is a list of lists, of tuples
         # [ [ (2,2), (3,3)], [ (3,4) ] ]
         # in the main list, there are 4 lists
@@ -73,23 +67,19 @@ class Base(BaseShape):
     def save(self):
         prev_point = None
         drawing = dxf.drawing(deskTop + 'output.dxf')
-        print(self.all_points)
-        print()
 
         for list_points in self.all_points:
-            print('start corner', len(list_points))
 
             for point in list_points:
                 if prev_point:
                     drawing.add(dxf.line(prev_point, point, thickness=2, color=1))
-                    print(prev_point,point)
                 prev_point = point
 
         drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=2, color=1))
 
-        os.chmod(deskTop + 'output.dxf', stat.S_IWRITE)
+        #os.chmod(deskTop + 'output.dxf', stat.S_IWRITE)
         drawing.save()
-        os.chmod(deskTop + 'output.dxf', stat.S_IREAD)
+        #os.chmod(deskTop + 'output.dxf', stat.S_IREAD)
 
     def add_notch(self, numberNotchBottom = None, lengthNotchBottom=None, numberNotchSide = None, lengthNotchSide=None):
         """Adds all the notches, given the length/number of notches"""
@@ -152,7 +142,6 @@ class Side_side(BaseShape):
 
         self.mat_thickness = baseObject.mat_thickness
 
-        self.num_notch_bottom = baseObject.height
 
         self.bottomLeft = [(0, 0)]
         self.bottomRight = [(self.width - self.mat_thickness, 0)]
@@ -161,7 +150,7 @@ class Side_side(BaseShape):
 
         self.allpoints = [self.bottomLeft, self.bottomRight, self.topRight, self.topLeft]
 
-        self.depress_bottom = Decimal(self.width - (self.bottomNotchLength * self.bottomNotchNumber)) / (self.bottomNotchNumber - 1)
+        self.depress_bottom = Decimal(self.width - (self.bottomNotchLength * (self.bottomNotchNumber-2)) - 4 * self.mat_thickness) / (self.bottomNotchNumber - 1)
 
 
         self.add_notch()
@@ -172,7 +161,7 @@ class Side_side(BaseShape):
         for iteration in range(4):
             point = self.allpoints[point_num][0]
             point_num += 1
-            #self.allpoints[iteration] += segment_creator_side(iteration,
+            self.allpoints[iteration] += segment_creator_side(iteration, self.depress_bottom, 0, self.bottomNotchNumber, 0, self.bottomNotchLength,0, self.allpoints[iteration][0], self.mat_thickness)
 
     def height_notch(self, numberNotch = None, lenNotch = None):
         if numberNotch and lenNotch:   # calculate the depression of the height notches
@@ -254,7 +243,6 @@ def segment_creator_base(direction,depress_bottom, depress_side, num_notch_botto
         
 
 
-    print(ret)
     return ret
             
 
@@ -274,26 +262,38 @@ def segment_creator_side(direction,depress_bottom, depress_side, num_notch_botto
     if direction == 0:
         # do the first special notch
         for iteration in range(num_notch_bottom):
-            if iteration == 0:  # go right and then down
-                next_point = (next_point[0] + mat_thickness * 2, next_point[1])
+            if iteration == 0:  # go right and then up
+                next_point = (next_point[0] + notch_thickness * 2, next_point[1])
                 ret.append(next_point)
-                next_point = (next_point[0], next_point[1] + mat_thickness)
+                next_point = (next_point[0], next_point[1] + notch_thickness)
                 ret.append(next_point)
 
             elif iteration == num_notch_bottom - 1:
-                next_point = (next_point[0],next_point[1] - mat_thickness)
+                next_point = (next_point[0],next_point[1] - notch_thickness)
                 ret.append(next_point)
-                next_point = (next_point[0] + mat_thickness, next_point[1])
+                next_point = (next_point[0] + notch_thickness, next_point[1])
                 ret.append(next_point)
             else:
                 next_point = (next_point[0] + depress_bottom,next_point[1])
                 ret.append(next_point)
-                next_point = (next_point[0], next_point[1] - mat_thickness)
+                next_point = (next_point[0], next_point[1] - notch_thickness)
                 ret.append(next_point)
                 next_point = (next_point[0] + length_bottom_notch, next_point[1])
                 ret.append(next_point)
-                next_point = (next_point[0], next_point[1] + mat_thickness)
+                next_point = (next_point[0], next_point[1] + notch_thickness)
                 ret.append(next_point)
+    elif direction == 1:
+        # create the little outcropping first
+        next_point = (next_point[0], next_point[1] + 2 * notch_thickness)
+        ret.append(next_point)
+        for iteration in range(0):
+            if iteration == num_notch_side - 1:
+                pass
+            else:
+                pass
+
+
+    return ret
 
         
         
