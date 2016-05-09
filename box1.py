@@ -270,9 +270,31 @@ def segment_creator_side(direction,depress_bottom, depress_side, num_notch_botto
     + = right
     """
     next_point = point
+    ret = []
     if direction == 0:
-        pass
-        
+        # do the first special notch
+        for iteration in range(num_notch_bottom):
+            if iteration == 0:  # go right and then down
+                next_point = (next_point[0] + mat_thickness * 2, next_point[1])
+                ret.append(next_point)
+                next_point = (next_point[0], next_point[1] + mat_thickness)
+                ret.append(next_point)
+
+            elif iteration == num_notch_bottom - 1:
+                next_point = (next_point[0],next_point[1] - mat_thickness)
+                ret.append(next_point)
+                next_point = (next_point[0] + mat_thickness, next_point[1])
+                ret.append(next_point)
+            else:
+                next_point = (next_point[0] + depress_bottom,next_point[1])
+                ret.append(next_point)
+                next_point = (next_point[0], next_point[1] - mat_thickness)
+                ret.append(next_point)
+                next_point = (next_point[0] + length_bottom_notch, next_point[1])
+                ret.append(next_point)
+                next_point = (next_point[0], next_point[1] + mat_thickness)
+                ret.append(next_point)
+
         
         
 
