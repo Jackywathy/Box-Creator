@@ -3,11 +3,12 @@ from dxfwrite import DXFEngine as dxf
 import os
 from decimal import *
 import stat
+import copy
 # red = 1, blue = 5
-#size_height = int(input('Height'))
-#size_width = int(input("widht"))
-#materialThickness = int(input('mat.Thickness')
-#lenNotch = int(input('len_notuch')
+# size_height = int(input('Height'))
+# size_width = int(input("widht"))
+# materialThickness = int(input('mat.Thickness')
+# lenNotch = int(input('len_notuch')
 # the length of each notch
 
 
@@ -91,21 +92,22 @@ class Base(BaseShape):
 
         # calcs to find the distance:
         # if both values are given
-        #notch_bottom_length, notch_side_number
+        # notch_bottom_length, notch_side_number
 
-        if (notch_side_number *  (notch_bottom_length + self.mat_thickness )) > self.width:
+        if (notch_side_number * (notch_bottom_length + self.mat_thickness)) > self.width:
             print("The width is too short")
             raise BaseException
         elif (notch_side_number * (notch_side_length + self.mat_thickness )) > self.height:
             print("The height is too short")
             raise BaseException
         # measure the length of the bottom notches
-        self.depression_bottom[0] = Decimal(self.width - (notch_bottom_length * notch_bottom_number) - (2 * self.mat_thickness)) / notch_bottom_number
-        self.depression_side[0] = Decimal(self.height - (notch_side_length * notch_side_number) - (2 * self.mat_thickness)) / notch_side_number
-        self.notch_bottom[1] = notch_bottom_number
-        self.notch_side[1] = notch_side_number
+
         self.depression_side[1] = notch_side_number + 1
         self.depression_bottom[1] = notch_bottom_number + 1
+        self.depression_bottom[0] = Decimal(self.width - (notch_bottom_length * notch_bottom_number) - (2 * self.mat_thickness)) / self.depression_bottom[1]
+        self.depression_side[0] = Decimal(self.height - (notch_side_length * notch_side_number) - (2 * self.mat_thickness)) / self.depression_side[1]
+        self.notch_bottom[1] = notch_bottom_number
+        self.notch_side[1] = notch_side_number
         self.notch_side[0] = notch_side_length
         self.notch_bottom[0] = notch_bottom_length
 
@@ -130,7 +132,7 @@ class Base(BaseShape):
 
 class Side_side(BaseShape):
     """the two sides on left and right. The left bit is less big """
-    def __init__(self, baseObject):
+    def __init__(self, baseObject, newmat = None):
         assert type(baseObject) == Base
         self.width = baseObject.height
         self.height = baseObject.height_box
@@ -138,13 +140,15 @@ class Side_side(BaseShape):
 
 
         # some more values
-        self.notch_bottom = baseObject.depression_side
+        self.notch_bottom = copy.deepcopy(baseObject.depression_side)
         self.notch_side = [None,None]
-        self.depress_side = [None,self.notch_bottom[1] - 1]
-        self.depress_bottom = [None,None]
+        self.depress_side = [None, None]
+        self.depress_bottom = [None, self.notch_bottom[1] - 1]
 
-
-        self.mat_thickness = baseObject.mat_thickness
+        if not newmat:
+            self.mat_thickness = baseObject.mat_thickness
+        else:
+            self.mat_thickness = newmat
 
         # the points
         self.bottomLeft = [(0, 0)]
@@ -154,7 +158,7 @@ class Side_side(BaseShape):
         self.allpoints = [self.bottomLeft, self.bottomRight, self.topRight, self.topLeft]
 
         # fidn the size of depressions
-        self.depress_bottom[0] = Decimal(self.width - (self.notch_bottom[1] * (self.notch_bottom[0]-2)) - 4 * self.mat_thickness) / (self.depress_side[1])
+        self.depress_bottom[0] = Decimal(self.width - (2 * self.mat_thickness) - (self.depress_bottom[1] * self.notch_bottom[0])) / self.depress_bottom[1]
 
 
     def add_notch(self):
@@ -163,7 +167,6 @@ class Side_side(BaseShape):
         for iteration in range(4):
             point = self.allpoints[point_num][0]
             point_num += 1
-            self.allpoints[iteration] += segment_creator_side(iteration, self.depress_bottom, 0, self.bottomNotchNumber, 0, self.bottomNotchLength,0, self.allpoints[iteration][0], self.mat_thickness)
 
     def height_notch(self, length_notch, number_notch):
         """Create the depress side and notch_side variables. Include two end bits as part of number_notch"""
@@ -273,20 +276,25 @@ def segment_creator_side(direction,depress_bottom, depress_side, num_notch_botto
                 next_point = (next_point[0], next_point[1] + notch_thickness)
                 ret.append(next_point)
 
-            elif iteration == num_notch_bottom - 1:
-                next_point = (next_point[0],next_point[1] - notch_thickness)
+            elif iteration == num_notch_bottom -1:
+                next_point = (next_point[0] + depress_bottom, next_point[1])  # go right * depression
                 ret.append(next_point)
-                next_point = (next_point[0] + notch_thickness, next_point[1])
+                next_point = (next_point[0], next_point[1] - notch_thickness)  # go down
                 ret.append(next_point)
+                next_point = (next_point[0] + notch_thickness, next_point[1])  # go right * mat)thickness
+                ret.append(next_point)
+
             else:
-                next_point = (next_point[0] + depress_bottom,next_point[1])
+                next_point = (next_point[0] + depress_bottom,next_point[1])  # right
                 ret.append(next_point)
-                next_point = (next_point[0], next_point[1] - notch_thickness)
+                next_point = (next_point[0], next_point[1] - notch_thickness)  # down
                 ret.append(next_point)
-                next_point = (next_point[0] + length_bottom_notch, next_point[1])
+                next_point = (next_point[0] + length_bottom_notch, next_point[1])  # right
                 ret.append(next_point)
-                next_point = (next_point[0], next_point[1] + notch_thickness)
+                next_point = (next_point[0], next_point[1] + notch_thickness)  #  up
                 ret.append(next_point)
+
+
     elif direction == 1:
         # create the little outcropping first
         next_point = (next_point[0], next_point[1] + 2 * notch_thickness)
@@ -305,12 +313,12 @@ def segment_creator_side(direction,depress_bottom, depress_side, num_notch_botto
 
 
 
-size_height = 100
+size_height = 200
 size_width = 200
 base = Base(size_height,size_width, 50, 5)
 
 
-base.add_notch(10,5,7,5)
+base.add_notch(50,1,50,1)
 
 base.save()
 
