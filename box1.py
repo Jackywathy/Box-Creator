@@ -23,42 +23,53 @@ RED = 1
 laserThickness = 0.01
 main_drawing = dxf.drawing(deskTop + 'main_drawing.dxf')
 
+def save_read_only(drawing,path = None):
+    """Unread-only a file, then sets it to write and saves, then read-onlies it again"""
+    if not path:
+        path = deskTop + 'output.dxf'
+    try:
+        os.chmod(path, stat.S_IWRITE)
+        drawing.save()
+        os.chmod(path, stat.S_IREAD)
+        
+    except FileNotFoundError:
+        drawing.save()
+
+    
 class BaseShape:
     def save(self, name = 'output'):
-        """A function with joins all the points in self.allpoints together"""
+        """A function with joins all the points in self.allpoints together and chucks it onto the same file as the directory the
+           file is located at: DEPRECIATED!!! Use insert now TODO REMOVE!!!"""
         prev_point = None
-        drawing = dxf.drawing(deskTop + name + '.dxf')
-
+        drawing = dxf.drawing('forcedsave.dxf')
+        drawing.add_layer("LINES")
         for list_points in self.all_points:
-
             for point in list_points:
                 if prev_point:
-                    drawing.add(dxf.line(prev_point, point, thickness=laserThickness, color=RED))
+                    drawing.add(dxf.line(prev_point, point, thickness=laserThickness, color=RED, layer = "LINES"))
                 prev_point = point
-
-        drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=laserThickness, color=RED))
-
-        try:
-            os.chmod(deskTop + 'output.dxf', stat.S_IWRITE)
-            drawing.save()
-            os.chmod(deskTop + 'output.dxf', stat.S_IREAD)
-        except FileNotFoundError:
-            drawing.save()
+        drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=laserThickness, color=RED, layer = "LINES"))
+        save_read_only(drawing)
 
 
     def insert(self, offset = (0,0)):
         """Inserts the drawing into the global variable main_drawing"""
         global main_drawing
         prev_point = None
-
+        main_drawing.add_layer('LINES')
+        
         for list_points in self.all_points:
-
             for point in list_points:
                 if prev_point:
-                    main_drawing.add(dxf.line((prev_point[0] + offset[0], prev_point[1] + offset[1]), (point[0] + offset[0], point[1] + offset[1]), thickness=laserThickness, color=RED))
+                    main_drawing.add(dxf.line((prev_point[0] + offset[0], prev_point[1] + offset[1]),
+                                              (point[0] + offset[0], point[1] + offset[1]),
+                                              thickness=laserThickness, color=RED,layer='LINES'))
                 prev_point = point
+        main_drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=laserThickness, color=RED, layer='LINES'))
 
-        main_drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=laserThickness, color=RED))
+    def insert_all_inline(gap,*args, insert_point = (0,0)):
+        """takes in all BaseShape objects and their descendants and chucks it all into 'maindrawing' in a line. Give it a gap distance"""
+        
 
 
 class Base(BaseShape):
@@ -391,12 +402,12 @@ def segment_creator_side(direction,depress_bottom, depress_side, num_notch_botto
 
 
 
-size_height = 200
-size_width = 200
-base = Base(size_height,size_width, 100, 5)
+size_height = 50
+size_width = 50
+base = Base(size_height,size_width, 30, Decimal(3) + Decimal(1)/10)
 
 
-base.add_notch(50,2,50,2)
+base.add_notch(10,2,10,2)
 
 base.save()
 
@@ -405,9 +416,9 @@ base.create_part_side()
 side1 = base.piece_side1
 side1.height_notch(20,1)
 base.insert()
-side1.insert((300,0))
-side1.insert((-300,0))
-side1.insert((0,300))
-side1.insert((0,-300))
+side1.insert((60,0))
+side1.insert((-60,0))
+side1.insert((-120,0))
+side1.insert((120,0))
 
 
