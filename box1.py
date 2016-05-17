@@ -21,6 +21,7 @@ else:
 
 RED = 1
 laserThickness = 0.01
+laser_error = Decimal(1) / 2
 main_drawing = dxf.drawing(deskTop + 'main_drawing.dxf')
 
 def save_read_only(drawing,path = None):
@@ -52,20 +53,19 @@ class BaseShape:
         save_read_only(drawing)
 
 
-    def insert(self, offset = (0,0)):
+    def insert(self, drawing,offset = (0,0)):
         """Inserts the drawing into the global variable main_drawing"""
-        global main_drawing
         prev_point = None
-        main_drawing.add_layer('LINES')
+        drawing.add_layer('LINES')
         
         for list_points in self.all_points:
             for point in list_points:
                 if prev_point:
-                    main_drawing.add(dxf.line((prev_point[0] + offset[0], prev_point[1] + offset[1]),
+                    drawing.add(dxf.line((prev_point[0] + offset[0], prev_point[1] + offset[1]),
                                               (point[0] + offset[0], point[1] + offset[1]),
                                               thickness=laserThickness, color=RED,layer='LINES'))
                 prev_point = point
-        main_drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=laserThickness, color=RED, layer='LINES'))
+        drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=laserThickness, color=RED, layer='LINES'))
 
     def insert_all_inline(gap,*args, insert_point = (0,0)):
         """takes in all BaseShape objects and their descendants and chucks it all into 'maindrawing' in a line. Give it a gap distance"""
@@ -74,7 +74,7 @@ class BaseShape:
 
 class Base(BaseShape):
     """The Base shape"""
-    def __init__(self, height_base, width_base, height_box, mat_thickness, margin_error = 2):
+    def __init__(self, height_base, width_base, height_box, mat_thickness, margin_error = laser_error):
         #bottom left corner is 0,0
         #create the bassseee temp stuff~!
         bottom_left = [(mat_thickness, mat_thickness)]
@@ -89,7 +89,7 @@ class Base(BaseShape):
         self.width = width_base
         self.height = height_base
         self.height_box = height_box
-
+        self.margin_error = margin_error
         # non-esistant ones- storage for the depression and notch sizes
         # [length, notches]
         self.depression_bottom = [None,None]
@@ -218,10 +218,6 @@ class Side_bottom:
     """The two sides on the bottom and top. The right bit is less big"""
 
 
-
-
-
-
 # for base only
 def segment_creator_base(direction,depress_bottom, depress_side, num_notch_bottom, num_notch_side, length_bottom_notch, length_side_notch, point, notch_thickness):
     """Takes in 1 number (direction) that follows this rule
@@ -241,11 +237,11 @@ def segment_creator_base(direction,depress_bottom, depress_side, num_notch_botto
 
     if direction == 0:
         for iteration in range(num_notch_bottom):
-            next_point = (next_point[0] + half_depress_bottom, next_point[1])  # go right
+            next_point = (next_point[0] + half_depress_bottom - laser_error, next_point[1])  # go right  (minused laser cutter here )
             ret.append(next_point)
             next_point = (next_point[0], next_point[1] - notch_thickness)      # go down
             ret.append(next_point)
-            next_point = (next_point[0] + length_bottom_notch, next_point[1])         # go right * length of notch
+            next_point = (next_point[0] + length_bottom_notch + laser_error, next_point[1])         # go right * length of notch (plused laser cutter)
             ret.append(next_point)
             next_point = (next_point[0], next_point[1] + notch_thickness)      # go upz
             ret.append(next_point)
@@ -258,11 +254,11 @@ def segment_creator_base(direction,depress_bottom, depress_side, num_notch_botto
             ret.append(next_point)
             next_point = (next_point[0] + notch_thickness, next_point[1])      # go right
             ret.append(next_point)
-            next_point = (next_point[0], next_point[1] + length_side_notch)         # go up * len of notch
+            next_point = (next_point[0], next_point[1] + length_side_notch + laser_error)         # go up * len of notch ( added laser cutter)
             ret.append(next_point)
             next_point = (next_point[0] - notch_thickness, next_point[1])      # go left
             ret.append(next_point)
-            next_point = (next_point[0], next_point[1] + half_depress_side)    # go up
+            next_point = (next_point[0], next_point[1] + half_depress_side - laser_error)    # go up   (minused laser cutter
 
     elif direction == 2:
         for iteration in range(num_notch_bottom):
@@ -270,11 +266,11 @@ def segment_creator_base(direction,depress_bottom, depress_side, num_notch_botto
             ret.append(next_point)
             next_point = (next_point[0], next_point[1] + notch_thickness)      # go up
             ret.append(next_point)
-            next_point = (next_point[0] - length_bottom_notch, next_point[1])         # go left * length of notch
+            next_point = (next_point[0] - length_bottom_notch - laser_error, next_point[1])         # go left * length of notch ( minused laser cutter
             ret.append(next_point)
             next_point = (next_point[0], next_point[1] - notch_thickness)      # go down
             ret.append(next_point)
-            next_point = (next_point[0] - half_depress_bottom, next_point[1])  # go left
+            next_point = (next_point[0] - half_depress_bottom + laser_error, next_point[1])  # go left  (added laser cutter
 
     elif direction == 3:
         for iteration in range(num_notch_side):
@@ -282,11 +278,11 @@ def segment_creator_base(direction,depress_bottom, depress_side, num_notch_botto
             ret.append(next_point)
             next_point = (next_point[0] - notch_thickness, next_point[1])      # go left
             ret.append(next_point)
-            next_point = (next_point[0], next_point[1] - length_side_notch)         # go down * length of notch
+            next_point = (next_point[0], next_point[1] - length_side_notch - laser_error)         # go down * length of notch ( - laser here)
             ret.append(next_point)
             next_point = (next_point[0] + notch_thickness, next_point[1])      # go right
             ret.append(next_point)
-            next_point = (next_point[0], next_point[1] - half_depress_side)    # go down
+            next_point = (next_point[0], next_point[1] - half_depress_side + laser_error)    # go down (+ laser here
         
 
 
@@ -344,11 +340,11 @@ def segment_creator_side(direction,depress_bottom, depress_side, num_notch_botto
             ret.append(next_point)
             next_point = (next_point[0] + notch_thickness, next_point[1])       # go right
             ret.append(next_point)
-            next_point = (next_point[0], next_point[1] + length_side_notch)     # go up
+            next_point = (next_point[0], next_point[1] + length_side_notch + laser_error)     # go up (+lasercutt
             ret.append(next_point)
             next_point = (next_point[0] - notch_thickness, next_point[1])       # go left
             ret.append(next_point)
-            next_point = (next_point[0], next_point[1] + half_side_depression)  # go up
+            next_point = (next_point[0], next_point[1] + half_side_depression - laser_error)  # go up
             ret.append(next_point)
 
         next_point = (next_point[0], next_point[1] + notch_thickness)           # go up a little again
@@ -398,11 +394,23 @@ def segment_creator_side(direction,depress_bottom, depress_side, num_notch_botto
     return ret
 
 
-def create_point(start_point,x=0,y=0,tol_x=0,tol_y=0):
+def create_point(start_point,x,y):
     """Takes in a point, adds the x and y to it, then adds some tolerance"""
-    return (start_point[0] + x + tol_x), (start_point[1] + y + tol_y)
+    return (start_point[0] + x), (start_point[1] + y)
         
 
+
+
+def insert_line(drawing,gap,startpoint,*args):
+    """Inserts all the items in 1 line, with a gap of gap"""
+
+    for item in args:
+        print(item)
+        assert isinstance(item,BaseShape)
+
+        item.insert(drawing, startpoint)
+        startpoint = create_point(startpoint,item.width + gap, 0)
+    drawing.save()
 
 
 size_height = 50
@@ -412,17 +420,10 @@ base = Base(size_height,size_width, 30, Decimal(3) + Decimal(1)/10)
 
 base.add_notch(10,2,10,2)
 
-base.save()
-
 base.create_part_side()
 
 side1 = base.piece_side1
-side1.height_notch(20,1)
-base.insert()
-side1.insert((60,0))
-side1.insert((-60,0))
-side1.insert((-120,0))
-side1.insert((120,0))
+side1.height_notch(5,2)
 
 
-main_drawing.save()
+insert_line(main_drawing, 10,(0,0),base,side1,side1,side1,side1)
