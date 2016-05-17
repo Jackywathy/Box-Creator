@@ -397,7 +397,10 @@ def segment_creator_side(direction,depress_bottom, depress_side, num_notch_botto
 
     return ret
 
-        
+
+def create_point(start_point,x=0,y=0,tol_x=0,tol_y=0):
+    """Takes in a point, adds the x and y to it, then adds some tolerance"""
+    return (start_point[0] + x + tol_x), (start_point[1] + y + tol_y)
         
 
 
@@ -422,3 +425,4 @@ side1.insert((-120,0))
 side1.insert((120,0))
 
 
+main_drawing.save()
