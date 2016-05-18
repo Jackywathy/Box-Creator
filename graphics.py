@@ -44,19 +44,19 @@ class Application:
 
         if self.height and self.width and self.length:
             try:
-                self.height = int(self.height)
-            except ValueError:
+                self.height = Decimal(self.height)
+                try:
+                    self.height = Decimal(self.length)
+                    try:
+                        self.height = Decimal(self.width)
+                    except InvalidOperation:
+                        tkMessageBox.showwarning('Error Message', "Incorrect Width")
+
+                except InvalidOperation:
+                    tkMessageBox.showwarning('Error Message', "Incorrect Length")
+
+            except InvalidOperation:
                 tkMessageBox.showwarning('Error Message', "Incorrect Height")
-
-            try:
-                self.height = int(self.length)
-            except ValueError:
-                tkMessageBox.showwarning('Error Message', "Incorrect Length")
-
-            try:
-                self.height = int(self.width)
-            except ValueError:
-                tkMessageBox.showwarning('Error Message', "Incorrect Width")
 
 
 
