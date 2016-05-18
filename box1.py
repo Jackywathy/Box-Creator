@@ -416,17 +416,19 @@ def insert_line(drawing,gap,startpoint,*args):
     drawing.save()
 
 
-size_height = 50
-size_width = 50
-base = Base(size_height,size_width, 30, Decimal(3) + Decimal(1)/10)
+
+if __name__ == '__main__':
+    size_height = 50
+    size_width = 50
+    base = Base(size_height,size_width, 30, Decimal(3) + Decimal(1)/10)
 
 
-base.add_notch(10,2,10,2)
+    base.add_notch(10,2,10,2)
 
-base.create_part_side()
+    base.create_part_side()
 
-side1 = base.piece_side1
-side1.height_notch(5,2)
+    side1 = base.piece_side1
+    side1.height_notch(5,2)
 
 
-insert_line(main_drawing, 10,(0,0),base,side1,side1,side1,side1)
+    insert_line(main_drawing, 10,(0,0),base,side1,side1,side1,side1)
