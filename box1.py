@@ -18,10 +18,13 @@ if os.name == 'nt':
 
 else:
     deskTop = os.path.expanduser("~/Desktop/")
+    
+if 'L:' in deskTop:
+    deskTop = ''
 
 RED = 1
 laserThickness = 0.01
-laser_error = Decimal(1) / 2
+laser_error = Decimal(45) / 100
 main_drawing = dxf.drawing(deskTop + 'main_drawing.dxf')
 
 def save_read_only(drawing,path = None):
