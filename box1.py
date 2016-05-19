@@ -11,6 +11,9 @@ import copy
 # lenNotch = int(input('len_notuch')
 # the length of each notch
 
+def round_down(num, divisor):
+    return num - (num%divisor)
+
 
 # some constants
 if os.name == 'nt':
@@ -157,6 +160,39 @@ class Base(BaseShape):
     def create_part_bottom(self):
         self.piece_bottom1 = Side_bottom(self)
 
+    def recommend_notch_top(self):
+        """Finds the Recommended Size of the Notches"""
+        ret = []
+        # try to make with 1 notches each
+        approx_base = int(round_down(self.width/2, 5))
+        ret.append(approx_base)
+
+        # try to make 2 notches each side
+        approx_base = int(round_down(self.width/4, 5))
+        ret.append(approx_base)
+
+        # try to make with 3 notches
+        approx_base = int(round_down(self.width/6, 5))
+        ret.append(approx_base)
+        return ret
+
+    def recommend_notch_side(self):
+        ret = []
+        approx_side = int(round_down(self.height/2, 5))
+        ret.append(approx_side)
+
+        # try to make 2 notches each side
+        approx_side = int(round_down(self.height/4, 5))
+        ret.append(approx_side)
+
+        # try to make with 3 notches
+        approx_side = int(round_down(self.height/6, 5))
+        ret.append(approx_side)
+        return ret
+
+
+
+
 
 
 
@@ -215,6 +251,8 @@ class Side_side(BaseShape):
         self.notch_side[0] = length_notch
         self.isheight = True
         self.add_notch()
+
+
 
 
 class Side_bottom:
