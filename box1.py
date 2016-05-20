@@ -27,7 +27,7 @@ if 'L:' in deskTop:
 
 RED = 1
 laserThickness = 0.01
-laser_error = Decimal(45) / 100
+laser_error = Decimal(40) / 100
 main_drawing = dxf.drawing(deskTop + 'main_drawing.dxf')
 
 def save_read_only(drawing,path = None):
@@ -44,6 +44,7 @@ def save_read_only(drawing,path = None):
 
 
 class BaseShape:
+
     def save(self, name = 'output'):
         """A function with joins all the points in self.allpoints together and chucks it onto the same file as the directory the
            file is located at: DEPRECIATED!!! Use insert now TODO REMOVE!!!"""
@@ -78,52 +79,34 @@ class BaseShape:
 
 
 
+# key vars
+
 class Base(BaseShape):
     """The Base shape"""
-    def __init__(self, height_base, width_base, height_box, mat_thickness, margin_error = laser_error):
-        #bottom left corner is 0,0
-        #create the bassseee temp stuff~!
-        bottom_left = [(mat_thickness, mat_thickness)]
-        top_left = [(mat_thickness, height_base - mat_thickness)]
-        top_right = [(width_base-mat_thickness, height_base - mat_thickness)]
-        bottom_right =  [(width_base - mat_thickness, mat_thickness)]
+    def __init__(self, height_base, width_base, height_box, mat_thickness,
+                 notch_bottom_length, notch_bottom_number,
+                 notch_side_length, notch_side_number,
+                 margin_error = laser_error):
 
-        # set the self-variable
-        self.mat_thickness = mat_thickness
-        self.all_points = [bottom_left, bottom_right, top_right, top_left]
+        self.mat_thickness = Decimal(mat_thickness)
+        # set some self-variables
+
+        self.all_points = [
+            [(self.mat_thickness, self.mat_thickness)],                           # bottom left
+            [(width_base - self.mat_thickness, self.mat_thickness)],              # bottom right
+            [(width_base - self.mat_thickness, height_base - self.mat_thickness)],  # top right
+            [(self.mat_thickness, height_base - self.mat_thickness)]              # top left
+        ]
+
         self.correction = margin_error
+
+        # width = left to right, height = up to down
         self.width = width_base
         self.height = height_base
         self.height_box = height_box
         self.margin_error = margin_error
         # non-esistant ones- storage for the depression and notch sizes
         # [length, notches]
-        self.depression_bottom = [None,None]
-        self.depression_side = [None,None]
-        self.notch_side = [None,None]
-        self.notch_bottom = [None,None]
-
-
-
-        # linked pieces
-        self.piece_bottom = None
-        self.piece_side = None
-
-        # self.all_points is a list of lists, of tuples
-        # [ [ (2,2), (3,3)], [ (3,4) ] ]
-        # in the main list, there are 4 lists
-        # each smaller list contains all the points
-
-
-
-
-
-    def add_notch(self, notch_bottom_length, notch_bottom_number, notch_side_length, notch_side_number):
-        """Adds all the notches, given the length/number of notches"""
-
-        # calcs to find the distance:
-        # if both values are given
-        # notch_bottom_length, notch_side_number
 
         if (notch_bottom_number * (notch_bottom_length + self.mat_thickness)) > self.width:
             print("The width is too short")
@@ -131,34 +114,36 @@ class Base(BaseShape):
         elif (notch_side_number * (notch_side_length + self.mat_thickness )) > self.height:
             print("The height is too short")
             raise BaseException
+
+        self.depression_bottom = [Decimal(self.width - (notch_bottom_length * notch_bottom_number) - (2 * self.mat_thickness)) / notch_bottom_number,
+                                  notch_bottom_number + 1]
+
+        self.depression_side = [Decimal(self.height - (notch_side_length * notch_side_number) - (2 * self.mat_thickness)) / notch_side_number,
+                                notch_side_number + 1]
+
+        self.notch_side = [notch_side_length,
+                           notch_side_number]
+
+        self.notch_bottom = [notch_bottom_length,
+                             notch_bottom_number]
+        '''
+        self.all_points is a list of lists, of tuples
+        [ [ (2,2), (3,3)], [ (3,4) ] ]
+        in the main list, there are 4 lists
+        each smaller list contains all the points
+        '''
         # measure the length of the bottom notches
-
-        self.depression_side[1] = notch_side_number + 1
-        self.depression_bottom[1] = notch_bottom_number + 1
-        self.depression_bottom[0] = Decimal(self.width - (notch_bottom_length * notch_bottom_number) - (2 * self.mat_thickness)) / notch_bottom_number
-        self.depression_side[0] = Decimal(self.height - (notch_side_length * notch_side_number) - (2 * self.mat_thickness)) / notch_side_number
-        self.notch_bottom[1] = notch_bottom_number
-        self.notch_side[1] = notch_side_number
-        self.notch_side[0] = notch_side_length
-        self.notch_bottom[0] = notch_bottom_length
-
-        # the depression about the base and sides
-        # main driver code: crap loads of arguments and it will do you bidding!
-        #start with bottom left corner
 
         point_num = 0
         for side in range(4):
             point = self.all_points[point_num][0]
             point_num += 1
-            self.all_points[side] += segment_creator_base(side, self.depression_bottom[0], self.depression_side[0], notch_bottom_number, notch_side_number, notch_bottom_length, notch_side_length,
+            self.all_points[side] += segment_creator_base(side, self.depression_bottom[0], self.depression_side[0],
+                                                          notch_bottom_number, notch_bottom_length,
+                                                          notch_side_number, notch_side_length,
                                                           point, self.mat_thickness)
 
-    def create_part_side(self):
-        self.piece_side1 = Side_side(self)
 
-
-    def create_part_bottom(self):
-        self.piece_bottom1 = Side_bottom(self)
 
     def recommend_notch_top(self):
         """Finds the Recommended Size of the Notches"""
@@ -193,11 +178,7 @@ class Base(BaseShape):
 
 
 
-
-
-
-
-class Side_side(BaseShape):
+class Side_side(BaseShape,):
     """the two sides on left and right. The left bit is less big """
     def __init__(self, baseObject, newmat = None):
         assert type(baseObject) == Base
@@ -260,7 +241,11 @@ class Side_bottom:
 
 
 # for base only
-def segment_creator_base(direction,depress_bottom, depress_side, num_notch_bottom, num_notch_side, length_bottom_notch, length_side_notch, point, notch_thickness):
+def segment_creator_base(direction,
+                         depress_bottom_length, depress_side_length,
+                         notch_bottom_number, notch_bottom_length,
+                         notch_side_number, notch_side_length,
+                         point, notch_thickness):
     """Takes in 1 number (direction) that follows this rule
     :0 = goes right
     :1 = goes up
@@ -272,17 +257,16 @@ def segment_creator_base(direction,depress_bottom, depress_side, num_notch_botto
     + = right
     """
     ret = []
-    half_depress_bottom = depress_bottom/2
-    half_depress_side = depress_side/2
+    half_depress_bottom = depress_bottom_length/2
+    half_depress_side = depress_side_length/2
     next_point = point
-
     if direction == 0:
-        for iteration in range(num_notch_bottom):
-            next_point = (next_point[0] + half_depress_bottom - laser_error, next_point[1])  # go right  (minused laser cutter here )
+        for iteration in range(notch_bottom_number):
+            next_point = ((next_point[0] + half_depress_bottom - laser_error), next_point[1])  # go right  (minused laser cutter here )
             ret.append(next_point)
             next_point = (next_point[0], next_point[1] - notch_thickness)      # go down
             ret.append(next_point)
-            next_point = (next_point[0] + length_bottom_notch + laser_error, next_point[1])         # go right * length of notch (plused laser cutter)
+            next_point = (next_point[0] + notch_bottom_length + laser_error, next_point[1])         # go right * length of notch (plused laser cutter)
             ret.append(next_point)
             next_point = (next_point[0], next_point[1] + notch_thickness)      # go upz
             ret.append(next_point)
@@ -290,36 +274,36 @@ def segment_creator_base(direction,depress_bottom, depress_side, num_notch_botto
             ret.append(next_point)
 
     elif direction == 1:
-        for iteration in range(num_notch_side):
+        for iteration in range(notch_side_number):
             next_point = (next_point[0], next_point[1] + half_depress_side)    # go up
             ret.append(next_point)
             next_point = (next_point[0] + notch_thickness, next_point[1])      # go right
             ret.append(next_point)
-            next_point = (next_point[0], next_point[1] + length_side_notch + laser_error)         # go up * len of notch ( added laser cutter)
+            next_point = (next_point[0], next_point[1] + notch_side_length + laser_error)         # go up * len of notch ( added laser cutter)
             ret.append(next_point)
             next_point = (next_point[0] - notch_thickness, next_point[1])      # go left
             ret.append(next_point)
             next_point = (next_point[0], next_point[1] + half_depress_side - laser_error)    # go up   (minused laser cutter
 
     elif direction == 2:
-        for iteration in range(num_notch_bottom):
+        for iteration in range(notch_bottom_number):
             next_point = (next_point[0] - half_depress_bottom, next_point[1])  # go left
             ret.append(next_point)
             next_point = (next_point[0], next_point[1] + notch_thickness)      # go up
             ret.append(next_point)
-            next_point = (next_point[0] - length_bottom_notch - laser_error, next_point[1])         # go left * length of notch ( minused laser cutter
+            next_point = (next_point[0] - notch_bottom_length - laser_error, next_point[1])         # go left * length of notch ( minused laser cutter
             ret.append(next_point)
             next_point = (next_point[0], next_point[1] - notch_thickness)      # go down
             ret.append(next_point)
             next_point = (next_point[0] - half_depress_bottom + laser_error, next_point[1])  # go left  (added laser cutter
 
     elif direction == 3:
-        for iteration in range(num_notch_side):
+        for iteration in range(notch_side_number):
             next_point = (next_point[0], next_point[1] - half_depress_side)    # go down
             ret.append(next_point)
             next_point = (next_point[0] - notch_thickness, next_point[1])      # go left
             ret.append(next_point)
-            next_point = (next_point[0], next_point[1] - length_side_notch - laser_error)         # go down * length of notch ( - laser here)
+            next_point = (next_point[0], next_point[1] - notch_side_length - laser_error)         # go down * length of notch ( - laser here)
             ret.append(next_point)
             next_point = (next_point[0] + notch_thickness, next_point[1])      # go right
             ret.append(next_point)
@@ -456,17 +440,11 @@ def insert_line(drawing,gap,startpoint,*args):
 
 
 if __name__ == '__main__':
-    size_height = 50
-    size_width = 50
-    base = Base(size_height,size_width, 30, Decimal(3) + Decimal(1)/10)
+    base = Base(
+        height_base=200,width_base=300,height_box = 200, mat_thickness='3.3',
+
+        notch_bottom_length=30, notch_bottom_number=2,
+        notch_side_length=30, notch_side_number=2,
 
 
-    base.add_notch(10,2,10,2)
-
-    base.create_part_side()
-
-    side1 = base.piece_side1
-    side1.height_notch(5,2)
-
-
-    insert_line(main_drawing, 10,(0,0),base,side1,side1,side1,side1)
+)
