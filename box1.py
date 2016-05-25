@@ -28,12 +28,12 @@ if 'L:' in deskTop:
 RED = 1
 laserThickness = 0.01
 laser_error = Decimal(40) / 100
-main_drawing = dxf.drawing('main_drawing.dxf')
+main_drawing = dxf.drawing(deskTop + 'main_drawing.dxf')
 
 def save_read_only(drawing,path = None):
     """Unread-only a file, then sets it to write and saves, then read-onlies it again"""
     if not path:
-        path = 'output.dxf'
+        path = deskTop + 'output.dxf'
     try:
         os.chmod(path, stat.S_IWRITE)
         drawing.save()
@@ -447,45 +447,33 @@ def insert_line(drawing,gap,startpoint,*args):
     drawing.save()
 
 if __name__ == '__main__':
+    base = Base(
+        height_base=200,width_base=300, mat_thickness='5',
+        notch_bottom_length=30, notch_bottom_number=2,
+        notch_side_length=30, notch_side_number=2,
+        margin_error = laser_error
+    )
+    side = Side(
+        baseObject=base,
+        height = 100,
+        length_notch_height=30,
+        number_notch_height=1,
+        margin_error = laser_error,
+        side='side'
+    )
 
-    if not input('Press Enter for automatic'):
-        base = Base(
-            height_base=200,width_base=300, mat_thickness='5',
-            notch_bottom_length=30, notch_bottom_number=2,
-            notch_side_length=30, notch_side_number=2,
-            margin_error = laser_error
-        )
-        side = Side(
-            baseObject=base,
-            height = 100,
-            length_notch_height=30,
-            number_notch_height=1,
-            margin_error = laser_error,
-            side='side'
-        )
+    bottom = Side(
+        baseObject=base,
+        height = 100,
+        length_notch_height=30,
+        number_notch_height=1,
+        margin_error = laser_error,
+        side = 'bottom'
+    )
+    main_drawing = dxf.drawing('main.dxf')
+    base.insert(main_drawing, (0, 0))
+    side.insert(main_drawing, (500,0))
+    bottom.insert(main_drawing, (1000,0))
+    main_drawing.save()
 
-        bottom = Side(
-            baseObject=base,
-            height = 100,
-            length_notch_height=30,
-            number_notch_height=1,
-            margin_error = laser_error,
-            side = 'bottom'
-        )
-        main_drawing = dxf.drawing('main.dxf')
-        base.insert(main_drawing, (0, 0))
-        side.insert(main_drawing, (500,0))
-        bottom.insert(main_drawing, (1000,0))
-        name = input("Name of output file")
-        if name:
-            main_drawing.saveas(name)
-        else:
-            main_drawing.save()
-
-    else:
-
-        length = Decimal(input('Enter Box Length'))
-        width = Decimal(input('Enter Box Width'))
-        height = Decimal(input("Enter Box Height"))
-        materialThickness = Decimal(input('Material Thickness'))
 
