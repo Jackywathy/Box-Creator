@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Box-Creator.iml" filepath="$PROJECT_DIR$/.idea/Box-Creator.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../mine-sweeper/.idea/mine-sweeper.iml" filepath="$PROJECT_DIR$/../mine-sweeper/.idea/mine-sweeper.iml" />
       <module fileurl="file://$PROJECT_DIR$/../school-trophies/.idea/school-trophies.iml" filepath="$PROJECT_DIR$/../school-trophies/.idea/school-trophies.iml" />
     </modules>
   </component>
