@@ -446,34 +446,96 @@ def insert_line(drawing,gap,startpoint,*args):
         startpoint = create_point(startpoint,item.width + gap, 0)
     drawing.save()
 
-if __name__ == '__main__':
+
+if __name__ == '__main__': #TODO- GRAPHICS
+    length = Decimal(input("ENTER LENGTH(all mm): "))#--- x
+    height = Decimal(input("ENTER HEIGHT: "))#|  y
+    breadth = Decimal(input("ENTER BREADTH: "))#/ z
+    mat_thickness = Decimal(input("ENTER THICKNESS: "))
+    print("Margin of error is", laser_error)
+    
+    # 5 notches is default
+    default = int(input("Enter default num,. of pins, (5 is default)"))
+    if not default:
+        default = 5
+    
+
+    if input('is ' + str(default) +' notches and' +' ' + str(length // (default * 2)) + ' mm each pin on length good (Y/N)') != 'N':
+        notch_len_num = default
+        notch_len_len = length // (default * 2)
+    else:
+        notch_len_num = int(input("ENTER Number of notches, Lenght"))
+        notch_len_len = Decimal(input("Enter len of notches, length"))
+
+
+    if input('is ' + str(default) + ' notches and' +' '+ str(height // (default * 2)) + ' mm on each pin on height good (Y/N)') != 'N':
+        notch_hei_num = default
+        notch_hei_len = height // (default * 2)
+    else:
+        notch_hei_num = int(input("ENTER Number of notches, height"))
+        notch_hei_len = Decimal(input("Enter len of notches, height"))
+
+
+    if input('is ' + str(default) + ' notches and' + ' ' +str(breadth // (default * 2)) + ' mm on each pin on breadth good (Y/N)') != 'N':
+        notch_bre_num = default
+        notch_bre_len = breadth // (default * 2)
+    else:
+        notch_bre_num = int(input("ENTER Number of notches, breadth"))
+        notch_bre_len = Decimal(input("Enter len of notches, breadth"))
+
+    
+
+    
+    
+
+    between = 20
+    
+    
+
+    
     base = Base(
-        height_base=200,width_base=300, mat_thickness='5',
-        notch_bottom_length=30, notch_bottom_number=2,
-        notch_side_length=30, notch_side_number=2,
+        height_base=breadth,width_base=length, mat_thickness=mat_thickness,
+        notch_bottom_length=notch_len_len, notch_bottom_number=notch_len_num,
+        notch_side_length=notch_bre_len, notch_side_number=notch_bre_num,
         margin_error = laser_error
     )
     side = Side(
         baseObject=base,
-        height = 100,
-        length_notch_height=30,
-        number_notch_height=1,
+        height = height,
+        length_notch_height=notch_hei_len,
+        number_notch_height=notch_hei_num,
         margin_error = laser_error,
         side='side'
     )
 
     bottom = Side(
         baseObject=base,
-        height = 100,
-        length_notch_height=30,
-        number_notch_height=1,
+        height = height,
+        length_notch_height=notch_hei_len,
+        number_notch_height=notch_hei_num,
         margin_error = laser_error,
         side = 'bottom'
     )
     main_drawing = dxf.drawing('main.dxf')
-    base.insert(main_drawing, (0, 0))
-    side.insert(main_drawing, (500,0))
-    bottom.insert(main_drawing, (1000,0))
+    insert_point = [0,0]
+    base.insert(main_drawing, insert_point)
+    # 0 point
+    insert_point[0] += length + between
+
+    
+    side.insert(main_drawing, insert_point)
+    
+    insert_point[0] += breadth + between
+    
+    side.insert(main_drawing, insert_point)
+    insert_point[0] += breadth + between
+
+
+    bottom.insert(main_drawing, insert_point)
+    insert_point[0] += length + between
+    
+    bottom.insert(main_drawing, insert_point)
     main_drawing.save()
+
 
 
