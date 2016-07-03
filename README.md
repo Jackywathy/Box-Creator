@@ -16,10 +16,10 @@ A repo to make boxes. All boxes must be box pins. Instructions not Clear
 
 
 ##TODO
-**GRAPHICS!**
-**Generate Closed Boxes**
-Code Refactoring (EZ?)
-Make notch-fitting a little better by halfing it and applying to both sides
+* **GRAPHICS!**
+* **Generate Closed Boxes**
+* Code Refactoring (EZ?)
+* Make notch-fitting a little better by halfing it and applying to both sides
 
 ##License
 NONE! use as you please.
