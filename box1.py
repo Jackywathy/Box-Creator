@@ -1,4 +1,4 @@
-import dxfwrite
+#import dxfwrite
 from dxfwrite import DXFEngine as dxf
 import os
 from decimal import *
@@ -14,26 +14,18 @@ import copy
 def round_down(num, divisor):
     return num - (num%divisor)
 
+#Sum constants
 
-# some constants
-if os.name == 'nt':
-    deskTop = os.path.expanduser("~\\Desktop\\")
+K_RED = 1
+K_THICKNESS = 0.01
+K_EXTRA_MATERIAL = Decimal(40) / 100
 
-else:
-    deskTop = os.path.expanduser("~/Desktop/")
 
-if 'L:' in deskTop:
-    deskTop = ''
-
-RED = 1
-laserThickness = 0.01
-laser_error = Decimal(40) / 100
-main_drawing = dxf.drawing(deskTop + 'main_drawing.dxf')
 
 def save_read_only(drawing,path = None):
     """Unread-only a file, then sets it to write and saves, then read-onlies it again"""
     if not path:
-        path = deskTop + 'output.dxf'
+        path = 'output.dxf'
     try:
         os.chmod(path, stat.S_IWRITE)
         drawing.save()
@@ -54,78 +46,87 @@ class BaseShape:
         for list_points in self.all_points:
             for point in list_points:
                 if prev_point:
-                    drawing.add(dxf.line(prev_point, point, thickness=laserThickness, color=RED, layer = "LINES"))
+                    drawing.add(dxf.line(prev_point, point, thickness=K_THICKNESS, color=K_RED, layer ="LINES"))
                 prev_point = point
-        drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=laserThickness, color=RED, layer = "LINES"))
+        drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=K_THICKNESS, color=K_RED, layer ="LINES"))
         save_read_only(drawing)
 
 
-    def insert(self, drawing,offset = (0,0)):
-        """Inserts the drawing into the global variable main_drawing"""
+    def insert(self, drawing, offset = (0,0)):
+        """Inserts the drawing into the drawing given"""
         prev_point = None
         drawing.add_layer('LINES')
 
         for list_points in self.all_points:
             for point in list_points:
                 if prev_point:
-                    drawing.add(dxf.line((prev_point[0] + offset[0], prev_point[1] + offset[1]),
-                                              (point[0] + offset[0], point[1] + offset[1]),
-                                              thickness=laserThickness, color=RED,layer='LINES'))
+                    drawing.add(dxf.line((prev_point[0] + offset[0],  prev_point[1] + offset[1]),
+                                         (point[0] + offset[0],       point[1] + offset[1]),
+                                         thickness=K_THICKNESS, color=K_RED, layer='LINES'))
                 prev_point = point
-        drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=laserThickness, color=RED, layer='LINES'))
-
-    def insert_all_inline(gap,*args, insert_point = (0,0)):
-        """takes in all BaseShape objects and their descendants and chucks it all into 'maindrawing' in a line. Give it a gap distance"""
+        drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=K_THICKNESS, color=K_RED, layer='LINES'))
 
 
-
-# key vars
-
+# height_base = breadt, width_base = length
+#TODO REFACTOR CODE TO USE MORE _ VARS SO IT DOESNT SHADOW SO MUCH
 class Base(BaseShape):
-    """The Base shape"""
-    def __init__(self, height_base, width_base, mat_thickness,
-                 notch_bottom_length, notch_bottom_number,
-                 notch_side_length, notch_side_number,
-                 margin_error = laser_error):
+    """The Base of the shape. Inherits save-functions from BaseShape. Breadth is y axis, length is x axis"""
+    def __init__(self, _length, _breadth, _thickness,
+                 length_n_len, length_n_num,
+                 breadth_n_len, breadth_n_num,
+                 _correction=K_EXTRA_MATERIAL,
+                 ):
 
-        self.mat_thickness = Decimal(mat_thickness)
-        self.margin_error = margin_error
+
         # set some self-variables
 
         self.all_points = [
-            [(self.mat_thickness, self.mat_thickness)],                           # bottom left
-            [(width_base - self.mat_thickness, self.mat_thickness)],              # bottom right
-            [(width_base - self.mat_thickness, height_base - self.mat_thickness)],  # top right
-            [(self.mat_thickness, height_base - self.mat_thickness)]              # top left
+            [(_thickness,            _thickness)],                 # bottom left
+            [(_length - _thickness,  _thickness)],                 # bottom right
+            [(_length - _thickness,  _breadth - _thickness)],      # top right
+            [(_thickness,            _breadth - _thickness)]       # top left
         ]
 
-        self.correction = margin_error
+        # width = left to right, height = up to down TODO REMOVE LEGACY VALUES!!!!
+        self.length = self.width =  _length
+        self.breadth = self.height = _breadth
 
-        # width = left to right, height = up to down
-        self.width = width_base
-        self.height = height_base
-        self.margin_error = margin_error
+        self.thickness = Decimal(_thickness)
+        self.correction = _correction
+
+        #TODO remove legacy VALUES!
+        self.mat_thickness = _thickness
+
+
         # non-esistant ones- storage for the depression and notch sizes
         # [length, notches]
 
-        if (notch_bottom_number * (notch_bottom_length + self.mat_thickness)) > self.width:
-            print("The width is too short")
-            raise BaseException
-        elif (notch_side_number * (notch_side_length + self.mat_thickness )) > self.height:
-            print("The height is too short")
-            raise BaseException
+        if (length_n_num * length_n_len + 2 * _thickness) > _length:
+            # the minimum theretical size of a box.
+            raise ValueError("The length is too short")
 
-        self.depression_bottom = [Decimal(self.width - (notch_bottom_length * notch_bottom_number) - (2 * self.mat_thickness)) / notch_bottom_number,
-                                  notch_bottom_number + 1]
+        if (breadth_n_num * breadth_n_len + 2 * _thickness) > _breadth:
+            raise ValueError("The breadth is too short")
 
-        self.depression_side = [Decimal(self.height - (notch_side_length * notch_side_number) - (2 * self.mat_thickness)) / notch_side_number,
-                                notch_side_number + 1]
+        if (_length - (length_n_num * length_n_len + 2 * _thickness)) // length_n_num < length_n_num * _thickness:
+            # depressions are smaller than thickness
+            print("LENGTH IS VERY SMALL")
 
-        self.notch_side = [notch_side_length,
-                           notch_side_number]
+        if (_breadth - (breadth_n_num * breadth_n_len + 2 * _thickness)) // breadth_n_num < breadth_n_num * _thickness:
+            print("BREADTH IS VERY SMALL")
 
-        self.notch_bottom = [notch_bottom_length,
-                             notch_bottom_number]
+        # REMOVE SOME OF THESE! TODO REMOVE THE SECOND = !
+
+        self.depression_length = self.depression_side = [Decimal(_length - (length_n_num * length_n_num) - (2 * _thickness)) / length_n_num,
+                                  length_n_num + 1]
+
+        self.depression_breadth = self.depression_bottom = [Decimal(_breadth - (breadth_n_num * breadth_n_len) - (2 * _thickness)) / breadth_n_num,
+                                breadth_n_num + 1]
+
+        self.notch_length = self.notch_bottom =  [length_n_len, length_n_num]
+
+        self.notch_breadth = self.notch_side = [breadth_n_len, breadth_n_num]
+
         '''
         self.all_points is a list of lists, of tuples
         [ [ (2,2), (3,3)], [ (3,4) ] ]
@@ -134,14 +135,18 @@ class Base(BaseShape):
         '''
         # measure the length of the bottom notches
 
-        point_num = 0
-        for side in range(4):
-            point = self.all_points[point_num][0]
-            point_num += 1
-            self.all_points[side] += segment_creator_base(side, self.depression_bottom[0], self.depression_side[0],
-                                                          notch_bottom_number, notch_bottom_length,
-                                                          notch_side_number, notch_side_length,
-                                                          point, self.mat_thickness,local_laser_error=margin_error)
+        for iteration in range(4):
+            # 0 = bottom, 1 = rside, 2 = top, 3 = lside
+            point = self.all_points[iteration][0]
+            # start in a corner
+
+            self.all_points[iteration] += segment_creator_base(
+                iteration,
+                self.depression_length[0], self.depression_breadth[0],
+                length_n_num, length_n_len,
+                breadth_n_num, breadth_n_len,
+                point, _thickness, local_laser_error=_correction
+                                                            )
 
 
 
@@ -180,7 +185,7 @@ class Base(BaseShape):
 
 class Side(BaseShape):
     """the two sides on left and right. The left bit is less big """
-    def __init__(self, baseObject, height, length_notch_height, number_notch_height,side = 'side', top = 0,margin_error = laser_error):
+    def __init__(self, baseObject, height, length_notch_height, number_notch_height, side = 'side', top = 0, margin_error = K_EXTRA_MATERIAL):
         assert type(baseObject) == Base
 
         if side == 'side':
@@ -249,7 +254,7 @@ def segment_creator_base(direction,
                          depress_bottom_length, depress_side_length,
                          notch_bottom_number, notch_bottom_length,
                          notch_side_number, notch_side_length,
-                         point, notch_thickness, local_laser_error = laser_error):
+                         point, notch_thickness, local_laser_error = K_EXTRA_MATERIAL):
     """Takes in 1 number (direction) that follows this rule
     :0 = goes right
     :1 = goes up
@@ -263,7 +268,7 @@ def segment_creator_base(direction,
     ret = []
     half_depress_bottom = depress_bottom_length/2
     half_depress_side = depress_side_length/2
-    half_laser_error = laser_error/2
+    half_laser_error = K_EXTRA_MATERIAL / 2
     next_point = point
     if direction == 0:
         for iteration in range(notch_bottom_number):
@@ -323,7 +328,7 @@ def segment_creator_side(direction,
                          depress_bottom_len, depress_side_len,
                          num_notch_bottom, num_notch_side,
                          length_bottom_notch, length_side_notch,
-                         point, notch_thickness, top=False, laser_error = laser_error):
+                         point, notch_thickness, top=False, laser_error = K_EXTRA_MATERIAL):
     """Takes in 1 number (direction) that follows this rule
     :0 = goes right
     :1 = goes up
@@ -451,11 +456,14 @@ if __name__ == '__main__': #TODO- GRAPHICS
     length = Decimal(input("ENTER LENGTH(all mm): "))#--- x
     height = Decimal(input("ENTER HEIGHT: "))#|  y
     breadth = Decimal(input("ENTER BREADTH: "))#/ z
-    mat_thickness = Decimal(input("ENTER THICKNESS: "))
-    print("Margin of error is", laser_error)
+    thickness = Decimal(input("ENTER THICKNESS: "))
+    print("Margin of error is", K_EXTRA_MATERIAL)
     
     # 5 notches is default
-    default = int(input("Enter default num,. of pins, (5 is default)"))
+    try:
+        default = int(input("Enter default num,. of pins, (5 is default)"))
+    except ValueError:
+        default = 5
     if not default:
         default = 5
     
@@ -494,17 +502,17 @@ if __name__ == '__main__': #TODO- GRAPHICS
 
     
     base = Base(
-        height_base=breadth,width_base=length, mat_thickness=mat_thickness,
-        notch_bottom_length=notch_len_len, notch_bottom_number=notch_len_num,
-        notch_side_length=notch_bre_len, notch_side_number=notch_bre_num,
-        margin_error = laser_error
+        _length=length, _breadth=breadth, _thickness=thickness,
+        length_n_len=notch_len_len, length_n_num=notch_len_num,
+        breadth_n_len=notch_bre_len, breadth_n_num=notch_bre_num,
+        _correction = K_EXTRA_MATERIAL
     )
     side = Side(
         baseObject=base,
         height = height,
         length_notch_height=notch_hei_len,
         number_notch_height=notch_hei_num,
-        margin_error = laser_error,
+        margin_error = K_EXTRA_MATERIAL,
         side='side'
     )
 
@@ -513,7 +521,7 @@ if __name__ == '__main__': #TODO- GRAPHICS
         height = height,
         length_notch_height=notch_hei_len,
         number_notch_height=notch_hei_num,
-        margin_error = laser_error,
+        margin_error = K_EXTRA_MATERIAL,
         side = 'bottom'
     )
     main_drawing = dxf.drawing('main.dxf')
@@ -535,7 +543,7 @@ if __name__ == '__main__': #TODO- GRAPHICS
     insert_point[0] += length + between
     
     bottom.insert(main_drawing, insert_point)
-    main_drawing.save()
+    save_read_only(main_drawing)
 
 
 
