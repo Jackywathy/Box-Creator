@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/Box-Creator.iml" filepath="$PROJECT_DIR$/.idea/Box-Creator.iml" />
       <module fileurl="file://$USER_HOME$/mine-sweeper/.idea/mine-sweeper.iml" filepath="$USER_HOME$/mine-sweeper/.idea/mine-sweeper.iml" />
+      <module fileurl="file://$USER_HOME$/Desktop/school-trophies/.idea/school-trophies.iml" filepath="$USER_HOME$/Desktop/school-trophies/.idea/school-trophies.iml" />
       <module fileurl="file://$USER_HOME$/school-trophies/.idea/school-trophies.iml" filepath="$USER_HOME$/school-trophies/.idea/school-trophies.iml" />
     </modules>
   </component>
