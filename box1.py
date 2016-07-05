@@ -2,6 +2,7 @@ from dxfwrite import DXFEngine as dxf
 import os
 import stat as constants
 from decimal import *
+import numpy
 
 
 def round_down(num, divisor):
@@ -16,15 +17,18 @@ K_R_L = 'SIDE'
 K_T_B = 'BOTTOM'
 
 
-def save_read_only(drawing, path=None):
+def save_read_only(drawing, path=None, name = 'main.dxf'):
     """Unread-only a file, then sets it to write and saves, then read-only's it again"""
     if not path:
-        path = 'main.dxf'
+        path = name
     else:
-        path += 'main.dxf'
+        path += name
+    if not path.endswith('.dxf'):
+        path += '.dxf'
+
     try:
         os.chmod(path, constants.S_IWRITE)
-        drawing.saveas('main.dxf')
+        drawing.saveas(name)
         os.chmod(path, constants.S_IREAD)
         print("READ ONLY SUCCEEDED")
 
@@ -51,7 +55,7 @@ class BaseShape:
                     drawing.add(dxf.line(prev_point, point, thickness=K_THICKNESS, color=K_RED, layer="LINES"))
                 prev_point = point
         drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=K_THICKNESS, color=K_RED, layer="LINES"))
-        save_read_only(drawing)
+        save_read_only(drawing,name='forcedsave.dxf')
 
     def insert(self, drawing, offset=(0, 0)):
         """Inserts the drawing into the drawing given"""
@@ -65,7 +69,64 @@ class BaseShape:
                                          (point[0] + offset[0],       point[1] + offset[1]),
                                          thickness=K_THICKNESS, color=K_RED, layer='LINES'))
                 prev_point = point
-        drawing.add(dxf.line(prev_point, self.all_points[0][0], thickness=K_THICKNESS, color=K_RED, layer='LINES'))
+        drawing.add(dxf.line(create_point(prev_point,x=offset[0],y=offset[1]), create_point(self.all_points[0][0],x=offset[0],y=offset[1]), thickness=K_THICKNESS, color=K_RED, layer='LINES'))
+
+    def rotate_90_r(self, offset=True):
+        """Rotates 90 degrees around origin (0,0)"""
+        if type(self) == Base:
+            if self.rotation == 0:
+                offset = (0, self.length)
+                self.insertion_x = self.breadth
+                self.insertion_y = self.length
+
+            elif self.rotation == 1:
+                offset = (self.length, self.breadth)
+                self.insertion_x = self.length
+                self.insertion_y = self.breadth
+
+            elif self.rotation == 2:
+                offset = (self.breadth, 0)
+                self.insertion_x = self.breadth
+                self.insertion_y = self.length
+
+            elif self.rotation == 3:
+                self.rotation = -1
+                offset = (0,0)
+                self.insertion_x = self.length
+                self.insertion_y = self.breadth
+
+        elif type(self) == Side:
+            if self.rotation == 0:
+                offset = (0, self.side)
+                self.insertion_x = self.side
+                self.insertion_y = self.height
+
+            elif self.rotation == 1:
+                offset = (self.side, self.height)
+                self.insertion_x = self.height
+                self.insertion_y = self.side
+
+            elif self.rotation == 2:
+                offset = (self.height, 0)
+                self.insertion_x = self.side
+                self.insertion_y = self.height
+
+            elif self.rotation == 3:
+                offset = (0,0)
+                self.rotation = -1
+                self.insertion_x = self.height
+                self.insertion_y = self.side
+
+        if not offset:
+            offset = 0,0
+
+        for corner in self.all_points:
+            for iteration, item in enumerate(corner):
+                corner[iteration] = create_point(rotate_point_r(item), x=offset[0], y=offset[1])
+
+        self.rotation += 1
+
+
 
 
 # height_base = breadth, width_base = length
@@ -78,7 +139,7 @@ class Base(BaseShape):
                  _correction=K_EXTRA_MATERIAL,
                  ):
         # set some self-variables
-
+        self.rotation = 0
         self.all_points = [
             [(_thickness,            _thickness)],                 # bottom left
             [(_length - _thickness,  _thickness)],                 # bottom right
@@ -88,6 +149,8 @@ class Base(BaseShape):
 
         self.length = _length
         self.breadth = _breadth
+        self.insertion_x = _length
+        self.insertion_y = _breadth
 
         self.thickness = Decimal(_thickness)
         self.correction = _correction
@@ -183,6 +246,8 @@ class Side(BaseShape):
         self.height = _height
         self.baseObject = base_object
         self.thickness = base.thickness
+        self.piece_type = piece_type
+        self.rotation = 0
 
         if piece_type == K_R_L:
             self.side = base.breadth   # BREADTH IS SIDE
@@ -347,22 +412,22 @@ def segment_creator_side(direction,
 
     elif direction == 1:
         # RIGHT SIDE WITH A NOTCH - MAKE NOTCHES 1/2 correction bigger
-        next_point = (next_point[0], next_point[1] + notch_thickness)    # create the top bit and go up a ltitle
+        next_point = create_point(next_point, y=notch_thickness)    # create the top bit and go up a ltitle
         ret.append(next_point)
 
         for iteration in range(num_notch_side):
-            next_point = (next_point[0], next_point[1] + half_side_depression)  # go up
+            next_point = create_point(next_point, y=half_side_depression - half_correction)  # go up - 1/2 correction
             ret.append(next_point)
-            next_point = (next_point[0] + notch_thickness, next_point[1])       # go right
+            next_point = create_point(next_point, x=notch_thickness)       # go right
             ret.append(next_point)
-            next_point = (next_point[0], next_point[1] + length_side_notch + correction)     # go up (+lasercutt
+            next_point = create_point(next_point, y=length_side_notch + correction)     # go up (+lasercutt
             ret.append(next_point)
-            next_point = (next_point[0] - notch_thickness, next_point[1])       # go left
+            next_point = create_point(next_point, x=-notch_thickness)       # go left
             ret.append(next_point)
-            next_point = (next_point[0], next_point[1] + half_side_depression - correction)  # go up
+            next_point = create_point(next_point, y=half_side_depression - half_correction)  # go up - 1/2 correction
             ret.append(next_point)
 
-        next_point = (next_point[0], next_point[1] + notch_thickness)           # go up a little again
+        next_point = create_point(next_point, y=notch_thickness)           # go up a little again
         ret.append(next_point)
 
     elif direction == 2:
@@ -411,6 +476,8 @@ def create_point(start_point,x=0,y=0):
     return (start_point[0] + x), (start_point[1] + y)
 
 
+def rotate_point_r(coord):
+    return coord[1], -coord[0]
 
 
 def insert_line(drawing,gap,startpoint,*args):
@@ -425,8 +492,13 @@ def insert_line(drawing,gap,startpoint,*args):
     drawing.save()
 
 
+
+def transform_one(coord, x=0, y=0):
+    return coord[0]+x, coord[1]+y
+
+
 if __name__ == '__main__': #TODO- GRAPHICS
-    skip_all = False
+    skip_all = True
     if not skip_all:
         try:
             length = Decimal(input("ENTER LENGTH(all mm): ")) # --- x
@@ -458,7 +530,7 @@ if __name__ == '__main__': #TODO- GRAPHICS
         breadth = 1000
         thickness = 5
         between = 50
-        pins = 5
+        default = 5
 
     if input('is ' + str(default) + ' notches and' + ' ' + str(length // (default * 2)) + ' mm each pin on length good (Y/N)') != 'N':
         notch_len_num = default
@@ -510,25 +582,9 @@ if __name__ == '__main__': #TODO- GRAPHICS
     )
     main_drawing = dxf.drawing('main.dxf')
     insert_point = [0,0]
-    base.insert(main_drawing, insert_point)
-    # 0 point
-    insert_point[0] += length + between
-    
-    side.insert(main_drawing, insert_point)
-    
-    insert_point[0] += breadth + between
-    
-    side.insert(main_drawing, insert_point)
-    insert_point[0] += breadth + between
 
 
-    bottom.insert(main_drawing, insert_point)
-    insert_point[0] += length + between
-    
-    bottom.insert(main_drawing, insert_point)
-    save_read_only(main_drawing)
-    print(bottom.notch_bottom)
-    print(bottom.notch_height)
+
 
 
 
