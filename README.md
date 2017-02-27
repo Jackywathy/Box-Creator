@@ -1,5 +1,5 @@
 # Box-Creator
-A repo to make boxes. All boxes must be box pins. Instructions not Clear
+A repo to make boxes. All boxes must be box pins.
 
 
 
