@@ -2,7 +2,6 @@ from dxfwrite import DXFEngine as dxf
 import os
 import stat as constants
 from decimal import *
-import numpy
 
 
 def round_down(num, divisor):
