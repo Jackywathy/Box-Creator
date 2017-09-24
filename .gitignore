@@ -105,3 +105,4 @@ venv.bak/
 
 #ignore generated dxf files
 .dxf
+\.idea/

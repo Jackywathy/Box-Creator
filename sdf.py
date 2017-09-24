@@ -75,7 +75,6 @@ y = width
 z = height
 '''
 LAYER_NAME = "LINES"
-MINIMUM_NOTCH_SIZE = 6
 DXF_VERSION = "AC1027"
 DXF_ATTRIBS = {'color' : RED, 'line_weight': LINE_WEIGHT}
 LAYER_ATTRIBUTE = {'layer' : LAYER_NAME}
@@ -83,13 +82,17 @@ LAYER_ATTRIBUTE = {'layer' : LAYER_NAME}
 def add_tuple(tup1, tup2):
     return tuple(sum(x) for x in zip(tup1, tup2))
 
+def create_dxf_drawing():
+    dwg = ezdxf.new(DXF_VERSION)
+    dwg.layers.new(name=LAYER_NAME, dxfattribs=DXF_ATTRIBS)
+    return dwg
+
 class BoxBit(metaclass=abc.ABCMeta):
     """Base class for all shapes made out of a set of point"""
     def save(self, name='output.dxf', offset=(0,0)):
         """Creates a DXF made out of all the points this box comprised of"""
-        dwg = ezdxf.new(DXF_VERSION)
+        dwg = create_dxf_drawing()
 
-        dwg.layers.new(name=LAYER_NAME, dxfattribs=DXF_ATTRIBS)
         self.insert(dwg, offset)
         # add a shiny cool polyline (also its much easier than having to loop :D)
         dwg.saveas(name)
@@ -118,6 +121,7 @@ class BoxBit(metaclass=abc.ABCMeta):
                  interactive=False,
                  error=LASER_ERROR
                  ):
+        """Converted in length and width, length=x, width=y"""
         self._all_points = []
         self.width = width
         self.num_width_notches = num_width_notches
@@ -305,7 +309,7 @@ class BoxBase(BoxBit):
         # 1/2 notch, then notch, then notch, then notch, 1/2 notch
         #
         point = start_point
-        notch_width = self.height_notch_width
+        notch_width = self.width_notch_width
 
         #    |    +   |   -
         #  x |  right | left
@@ -468,33 +472,30 @@ class BoxSide(BoxBit):
         # 1/2 notch, then notch, then notch, then notch, 1/2 notch
         #
         point = start_point
-        notch_width = self.height_notch_width
+        notch_width = self.width_notch_width
         if self.do_top:
-            raise NotImplementedError()
             #    |    +   |   -
             #  x |  right | left
             #  y |   up   | down
             for iteration in range(self.num_width_notches):
                 # 1/2 a notch left
-                # give it 1 error on each side to allow pieces to fit together better
-                point = alter_tuple(point, -(notch_width / 2 - self.error), 0)
-                self.append(point)
-
-                # thickness up
-                point = alter_tuple(point, 0, self.mat_thickness)
-                self.append(point)
-
-                # 1 notch left, middle bit is slightly larger to allow for better fits
-                point = alter_tuple(point, -(notch_width + 2 * self.error), 0)
+                point = alter_tuple(point, notch_width / 2, 0)
                 self.append(point)
 
                 # thickness down
                 point = alter_tuple(point, 0, -self.mat_thickness)
                 self.append(point)
 
+                # 1 notch left
+                point = alter_tuple(point, -notch_width, 0)
+                self.append(point)
+
+                # thickness up
+                point = alter_tuple(point, 0, self.mat_thickness)
+                self.append(point)
+
                 # 1/2 a notch left
-                # give it 1 error on each side to allow pieces to fit together better
-                point = alter_tuple(point, -(notch_width / 2 - self.error), 0)
+                point = alter_tuple(point, -notch_width / 2 , 0)
                 self.append(point)
         else:
             point = alter_tuple(point, -(self.width - self.mat_thickness), 0)
@@ -562,18 +563,35 @@ def create_point(start_point, x, y):
 ##        startpoint = create_point(startpoint,item.width + gap, 0)
 ##    drawing.save()
 
-if __name__ == '__main__':
-    BoxSide(50, 2, 30, 1, 3, True).save(offset=(0,0))
+MINIMUM_NOTCH_SIZE = 10
+SPACING = 5
+
+def get_max_notch(total_width, not_width, mat_thickness):
+    """gets the maximum size of a notch"""
+    # total width = 2 * thickness + 2 * notch width * number notches
+    # num notches = (total_width - 2*thickness) / (2 * notch_width)
+    #  __----____----__
+    # |                |
+    return (total_width - 2 * mat_thickness) / (2 * not_width)
+
+def unittest():
+    BoxBase(50, 2, 100, 2, 3).save('base.dxf')
+    BoxSide(50, 2, 30, 1, 3, True).save('side1.dxf')
+    BoxSide(100, 2, 30, 1, 3, True).save('side2.dxf')
+
+
+def main():
     print("Box Creator - unstable prototype version 0.0.1")
     print()
     name = input("What is your name? ")
     length = float(input("Box length: "))  # --- x
-    breadth = float(input("Box breadth: "))  # / z
+    width = float(input("Box breadth: "))  # / z
     height = float(input("Box height: "))  # |  y
     local_thickness = float(input("Material thickness: "))
     print("Margin of error is", LASER_ERROR)
-    max_notch = int(min(length, breadth, height) / local_thickness / 2)
-    default = int(input("Enter the number of pins. The suggested maximum is " + str(max_notch) + ": "))
+    max_notch = int(get_max_notch(min(length, width, height), MINIMUM_NOTCH_SIZE, 3))
+    notches = int(input("Enter the number of pins. The suggested maximum is " + str(max_notch) + ": "))
+    closed_box = ask_user("Closed box?")
     print()
     print("In AutoCAD:")
     print(" - Zoom out")
@@ -589,84 +607,52 @@ if __name__ == '__main__':
     print("errors.")
     print()
     print()
-    if not default:
-        default = 5
-
-
-        #  if input('is ' + str(default) +' notches and' +' ' + str(length // (default * 2)) + ' mm each pin on length good (Y/N)') != 'N':
-    notch_len_num = default
-    notch_len_len = length // (default * 2)
-    #  else:
-    #      notch_len_num = int(input("ENTER Number of notches, Lenght"))
-    #      notch_len_len = Decimal(input("Enter len of notches, length"))
-
-
-    #  if input('is ' + str(default) + ' notches and' +' '+ str(height // (default * 2)) + ' mm on each pin on height good (Y/N)') != 'N':
-    notch_hei_num = default
-    notch_hei_len = height // (default * 2)
-    #  else:
-    #      notch_hei_num = int(input("ENTER Number of notches, height"))
-    #      notch_hei_len = Decimal(input("Enter len of notches, height"))
-
-
-    #  if input('is ' + str(default) + ' notches and' + ' ' +str(breadth // (default * 2)) + ' mm on each pin on breadth good (Y/N)') != 'N':
-    notch_bre_num = default
-    notch_bre_len = breadth // (default * 2)
-    #  else:
-    #      notch_bre_num = int(input("ENTER Number of notches, breadth"))
-    #      notch_bre_len = Decimal(input("Enter len of notches, breadth"))
-
-    between = 3
 
     base = BoxBase(
-        height_base=breadth, width_base=length, mat_thickness=local_thickness,
-        notch_bottom_length=notch_len_len, notch_bottom_number=notch_len_num,
-        notch_side_length=notch_bre_len, notch_side_number=notch_bre_num,
-        margin_error=LASER_ERROR
-    )
-    side = Side(
-        baseObject=base,
-        height=height,
-        length_notch_height=notch_hei_len,
-        number_notch_height=notch_hei_num,
-        margin_error=LASER_ERROR,
-        side='side'
+        length, notches, width, notches, local_thickness,
     )
 
-    bottom = Side(
-        baseObject=base,
-        height=height,
-        length_notch_height=notch_hei_len,
-        number_notch_height=notch_hei_num,
-        margin_error=LASER_ERROR,
-        side='bottom'
+    # side on the top/bottom of base
+    side1 = BoxSide(
+        length, notches, height, notches, local_thickness, do_top=closed_box
     )
+
+    # side on the left/right
+    side2 = BoxSide(
+        width, notches, height, notches, local_thickness, do_top=closed_box
+    )
+
     file_name = name + '_box.dxf'
-    main_drawing = dxf.drawing(file_name)
+    dwg = create_dxf_drawing()
+
     insert_point = [0, 0]
-    base.insert(main_drawing, insert_point)
-    # 0 point
-    insert_point[0] += length + between
+    base.insert(dwg, insert_point)
 
-    side.insert(main_drawing, insert_point)
+    # move it
+    insert_point[0] += base.width + SPACING
 
-    insert_point[0] += breadth + between
+    for _ in range(2):
+        side1.insert(dwg, insert_point)
+        insert_point[0] += side1.width + SPACING
 
-    side.insert(main_drawing, insert_point)
-    insert_point[0] += breadth + between
+    for _ in range(2):
+        side2.insert(dwg, insert_point)
+        insert_point[0] += side2.width + SPACING
 
-    bottom.insert(main_drawing, insert_point)
-    insert_point[0] += length + between
-
-    bottom.insert(main_drawing, insert_point)
     try:
-        main_drawing.save()
+        dwg.saveas(file_name)
     except PermissionError as e:
         print("Unable to save due to file open in another program.")
         input("Press enter to retry")
-        main_drawing.save()
+        dwg.saveas(file_name)
+
     print()
     print("Drawing has been saved.")
+
+
+if __name__ == '__main__':
+    main()
+
 
 
 
