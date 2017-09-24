@@ -2,9 +2,11 @@ __author__ = 'Jack,Shovel&Archie. D. Comben project manger'
 """V.0.1, unstable basic version. Not all features implemented. To be fixed after Y10 exams"""
 
 from dxfwrite import DXFEngine as dxf
+
+import ezdxf
 import os
 from os.path import join, expanduser
-from decimal import *
+
 import stat
 import copy
 
@@ -20,7 +22,7 @@ if 'L:' in deskTop:
 
 RED = 1
 laserThickness = 0.00
-laser_error = Decimal(40) / 100
+laser_error = 4 / 10
 
 def save_read_only(drawing,path = None):
     """Unread-only a file, then sets it to write and saves, then read-onlies it again"""
@@ -77,7 +79,7 @@ class Base(BaseShape):
                  notch_side_length, notch_side_number,
                  margin_error = laser_error):
 
-        self.mat_thickness = Decimal(mat_thickness)
+        self.mat_thickness = float(mat_thickness)
         self.margin_error = margin_error
         # set some self-variables
 
@@ -104,10 +106,10 @@ class Base(BaseShape):
             print("The height is too short")
             raise BaseException
 
-        self.depression_bottom = [Decimal(self.width - (notch_bottom_length * notch_bottom_number) - (2 * self.mat_thickness)) / notch_bottom_number,
+        self.depression_bottom = [float(self.width - (notch_bottom_length * notch_bottom_number) - (2 * self.mat_thickness)) / notch_bottom_number,
                                   notch_bottom_number + 1]
 
-        self.depression_side = [Decimal(self.height - (notch_side_length * notch_side_number) - (2 * self.mat_thickness)) / notch_side_number,
+        self.depression_side = [float(self.height - (notch_side_length * notch_side_number) - (2 * self.mat_thickness)) / notch_side_number,
                                 notch_side_number + 1]
 
         self.notch_side = [notch_side_length,
@@ -199,7 +201,7 @@ class Side(BaseShape):
 
         self.notch_side_right = [length_notch_height,
                                  number_notch_height]
-        self.depress_side_right = [Decimal(
+        self.depress_side_right = [float(
             self.height - (2 * self.mat_thickness) - (length_notch_height * number_notch_height)) / number_notch_height,
                                    number_notch_height + 1]
 
@@ -314,7 +316,7 @@ def segment_creator_side(direction,
     next_point = point
     ret = []
     half_bottom_notch = length_bottom_notch / 2
-    half_side_depression = Decimal(depress_side_len) / 2
+    half_side_depression = float(depress_side_len) / 2
     if direction == 0:
         # do the first special notch
         for iteration in range(num_notch_bottom):
@@ -427,10 +429,10 @@ if __name__ == '__main__':
     print("Box Creator - unstable prototype version 0.0.1")
     print()
     name = input("What is your name? ")
-    length = Decimal(input("Box length: "))#--- x
-    breadth = Decimal(input("Box breadth: "))#/ z
-    height = Decimal(input("Box height: "))#|  y
-    mat_thickness = Decimal(input("Material thickness: "))
+    length = float(input("Box length: "))#--- x
+    breadth = float(input("Box breadth: "))#/ z
+    height = float(input("Box height: "))#|  y
+    mat_thickness = float(input("Material thickness: "))
     print("Margin of error is", laser_error)
     max_notch = int(min(length, breadth, height) / mat_thickness / 2)
     default = int(input("Enter the number of pins. The suggested maximum is " + str(max_notch)+": "))
