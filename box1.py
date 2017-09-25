@@ -119,7 +119,8 @@ class BaseShape:
         if not offset:
             offset = 0,0
 
-        for corner in self.all_points:
+        for corner in self.all_poin
+            ts:
             for iteration, item in enumerate(corner):
                 corner[iteration] = create_point(rotate_point_r(item), x=offset[0], y=offset[1])
 

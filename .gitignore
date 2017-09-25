@@ -104,5 +104,7 @@ venv.bak/
 .mypy_cache/
 
 #ignore generated dxf files
-.dxf
+*.dxf
 \.idea/
+*.dwl
+*.dwl2

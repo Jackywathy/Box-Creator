@@ -1,10 +1,7 @@
 __author__ = 'Jack,Shovel&Archie. D. Comben project manger'
-"""V.0.1, unstable basic version. Not all features implemented. To be fixed after Y10 exams"""
+"""V.0.2, stable basic version. Most features implemented."""
 
-# TODO - REFACTOR this
-
-from dxfwrite import DXFEngine as dxf
-
+# switched to ezdxf as it allows AC1027 dxf files
 import ezdxf
 import ezdxf.modern.layouts as layouts
 
@@ -14,14 +11,7 @@ import abc
 from os.path import join, expanduser
 
 import stat
-import copy
 
-
-def round_down(num, divisor):
-    return num - (num % divisor)
-
-
-desktopPath = expanduser(join('~', 'Desktop'))
 
 RED = 1
 
@@ -33,11 +23,13 @@ def save_read_only(drawing, path='output.dxf'):
     """Unread-only a file, then sets it to write and saves, then read-onlies it again"""
     try:
         os.chmod(path, stat.S_IWRITE)
-        drawing.save()
+        drawing.saveas(path)
         os.chmod(path, stat.S_IREAD)
-
     except FileNotFoundError:
-        drawing.save()
+        # file doesnt exist
+        drawing.saveas(path)
+
+
 
 class BoxDrawing:
     def __init__(self, x, notches_x, y, notches_y, z, notches_z, mat_thickness):
@@ -88,6 +80,8 @@ def create_dxf_drawing():
     return dwg
 
 class BoxBit(metaclass=abc.ABCMeta):
+
+
     """Base class for all shapes made out of a set of point"""
     def save(self, name='output.dxf', offset=(0,0)):
         """Creates a DXF made out of all the points this box comprised of"""
@@ -111,9 +105,6 @@ class BoxBit(metaclass=abc.ABCMeta):
 
         msp = dwg.modelspace()  # type: layouts.Layout
         msp.add_lwpolyline(new_points, dxfattribs=LAYER_ATTRIBUTE)
-
-    def insert_all_inline(gap, *args, insert_point=(0, 0)):
-        """takes in all BaseShape objects and their descendants and chucks it all into 'maindrawing' in a line. Give it a gap distance"""
 
     def __init__(self, width, num_width_notches,
                  height, num_height_notches,
@@ -202,6 +193,9 @@ class BoxBit(metaclass=abc.ABCMeta):
         #  __----____----__
         # |                |
         return (total_width - 2 * mat_thickness) / (2 * num_notches)
+
+    def __str__(self):
+        return str(self._all_points)
 
 
 
@@ -479,7 +473,7 @@ class BoxSide(BoxBit):
             #  y |   up   | down
             for iteration in range(self.num_width_notches):
                 # 1/2 a notch left
-                point = alter_tuple(point, notch_width / 2, 0)
+                point = alter_tuple(point, -(notch_width / 2), 0)
                 self.append(point)
 
                 # thickness down
@@ -495,8 +489,13 @@ class BoxSide(BoxBit):
                 self.append(point)
 
                 # 1/2 a notch left
-                point = alter_tuple(point, -notch_width / 2 , 0)
+                point = alter_tuple(point, -(notch_width / 2) , 0)
                 self.append(point)
+
+            # thickness left
+            point = alter_tuple(point, -self.mat_thickness, 0)
+            self.append(point)
+
         else:
             point = alter_tuple(point, -(self.width - self.mat_thickness), 0)
             self.append(point)
@@ -546,23 +545,6 @@ class BoxSide(BoxBit):
 
 
 
-
-def create_point(start_point, x, y):
-    """Takes in a point, adds the x and y to it, then adds some tolerance"""
-    return (start_point[0] + x), (start_point[1] + y)
-
-
-##def insert_line(drawing,gap,startpoint,*args):
-##    """Inserts all the items in 1 line, with a gap of gap"""
-##
-##    for item in args:
-##        print(item)
-##        assert isinstance(item,BaseShape)
-##
-##        item.insert(drawing, startpoint)
-##        startpoint = create_point(startpoint,item.width + gap, 0)
-##    drawing.save()
-
 MINIMUM_NOTCH_SIZE = 10
 SPACING = 5
 
@@ -580,8 +562,52 @@ def unittest():
     BoxSide(100, 2, 30, 1, 3, True).save('side2.dxf')
 
 
+def test2():
+    length = 100
+    notches = 3
+    width = 200
+    height = 240
+    local_thickness = 3
+    closed_box = True
+    base = BoxBase(
+        length, notches, width, notches, local_thickness,
+    )
+
+    # side on the top/bottom of base
+    side1 = BoxSide(
+        length, notches, height, notches, local_thickness, do_top=closed_box
+    )
+
+    # side on the left/right
+    side2 = BoxSide(
+        width, notches, height, notches, local_thickness, do_top=closed_box
+    )
+    print(side1)
+    dwg = create_dxf_drawing()
+    bases = 2 if  closed_box else 1
+    insert_point = [0,0]
+
+    #for _ in range(bases):
+    #    base.insert(dwg, insert_point)
+    #    insert_point[0] += base.width + SPACING
+
+    for _ in range(1):
+        side1.insert(dwg, insert_point)
+        insert_point[0] += side1.width + SPACING
+
+    #for _ in range(2):
+    #    side2.insert(dwg, insert_point)
+    #    insert_point[0] += side2.width + SPACING
+
+    save_read_only(dwg, 'test2.dxf')
+
+
+
+DB = True
+version = '0.2'
+#test2()
 def main():
-    print("Box Creator - unstable prototype version 0.0.1")
+    print("Box Creator - unstable prototype version {}".format(version))
     print()
     name = input("What is your name? ")
     length = float(input("Box length: "))  # --- x
@@ -626,10 +652,15 @@ def main():
     dwg = create_dxf_drawing()
 
     insert_point = [0, 0]
-    base.insert(dwg, insert_point)
 
-    # move it
-    insert_point[0] += base.width + SPACING
+    if closed_box:
+        bases = 2
+    else:
+        bases = 1
+
+    for _ in range(bases):
+        base.insert(dwg, insert_point)
+        insert_point[0] += base.width + SPACING
 
     for _ in range(2):
         side1.insert(dwg, insert_point)
@@ -640,11 +671,12 @@ def main():
         insert_point[0] += side2.width + SPACING
 
     try:
-        dwg.saveas(file_name)
+        save_read_only(dwg, file_name)
     except PermissionError as e:
         print("Unable to save due to file open in another program.")
         input("Press enter to retry")
-        dwg.saveas(file_name)
+        save_read_only(dwg, file_name)
+
 
     print()
     print("Drawing has been saved.")
