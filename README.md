@@ -16,7 +16,7 @@ A repo to make boxes. All boxes are box pins, closed or open.
 3. Profit?
 
 ## Dependencies
-- **ezdxf** - allows writing of AC1027 dxf drawings, which have a line-weight attribute#
+- **ezdxf** - allows writing of AC1027 dxf drawings, which allows line-weight attribute to be set.
 
 
 ## TODO
