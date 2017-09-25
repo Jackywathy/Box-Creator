@@ -1,7 +1,9 @@
-import box1 as Engine
+from old import box1 as Engine
 from tkinter import *
-import tkinter.messagebox as tkMessageBox
-from decimal import *
+
+from old import box1 as Engine
+
+
 class Application:
     """My application!"""
 

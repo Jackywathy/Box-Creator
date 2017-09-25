@@ -1,29 +1,23 @@
 # Box-Creator
-A repo to make boxes. All boxes must be box pins.
+A repo to make boxes. All boxes are box pins, closed or open.
 
 
-
-##Current Features:
+## Current Features:
 **Creates a template of a laser-cuttable box, given**
 - Length, Height, Breadth of Box
 - Number of notches on Length, Height and Breadth
 - Length of the notches on Length, Height and Breadth!
 - Make notches slightly larger to fit into the slot, (can be specified, default 2mm)
 
-*Also theres an auto-detect but its not very good*
-- Takes Length, Height, Breadth and number of notches
-- number of notches must be equal on all sides :(
+## To Install
+1. Download and unzip the files
+![Folder image](/docs/images/image1.png)
+2. Run Box-Creator.py
+3. Profit?
+
+## Dependencies
+- **ezdxf** - allows writing of AC1027 dxf drawings, which have a line-weight attribute#
 
 
-##TODO
-* **GRAPHICS!**
-* **Generate Closed Boxes**
-* Code Refactoring (EZ?)
-* Make notch-fitting a little better by halfing it and applying to both sides
-
-##License
-NONE! use as you please.
-
-
-MarkDown is Fun! (THX quadrupleslap!)
-
+## TODO
+* Graphical interface

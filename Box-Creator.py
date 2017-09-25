@@ -7,30 +7,10 @@ import ezdxf.modern.layouts as layouts
 
 import os
 import abc
-
-from os.path import join, expanduser
-
 import stat
 
 
-RED = 1
-
-LINE_WEIGHT = 0.00
-LASER_ERROR = 0.4
-
-
-def save_read_only(drawing, path='output.dxf'):
-    """Unread-only a file, then sets it to write and saves, then read-onlies it again"""
-    try:
-        os.chmod(path, stat.S_IWRITE)
-        drawing.saveas(path)
-        os.chmod(path, stat.S_IREAD)
-    except FileNotFoundError:
-        # file doesnt exist
-        drawing.saveas(path)
-
-
-
+# fix?
 class BoxDrawing:
     def __init__(self, x, notches_x, y, notches_y, z, notches_z, mat_thickness):
         """
@@ -47,11 +27,6 @@ class BoxDrawing:
         """
         self.base = BoxBase()
 
-
-
-
-
-
 '''
 Super Spiffy Diagram
        .-------.
@@ -66,18 +41,10 @@ x = length
 y = width
 z = height
 '''
-LAYER_NAME = "LINES"
-DXF_VERSION = "AC1027"
-DXF_ATTRIBS = {'color' : RED, 'line_weight': LINE_WEIGHT}
-LAYER_ATTRIBUTE = {'layer' : LAYER_NAME}
+RED = 1
 
-def add_tuple(tup1, tup2):
-    return tuple(sum(x) for x in zip(tup1, tup2))
-
-def create_dxf_drawing():
-    dwg = ezdxf.new(DXF_VERSION)
-    dwg.layers.new(name=LAYER_NAME, dxfattribs=DXF_ATTRIBS)
-    return dwg
+LINE_WEIGHT = 0.00
+LASER_ERROR = 0.4
 
 class BoxBit(metaclass=abc.ABCMeta):
 
@@ -196,19 +163,6 @@ class BoxBit(metaclass=abc.ABCMeta):
 
     def __str__(self):
         return str(self._all_points)
-
-
-
-YES_RESPONSE = 'y', 'yes', 'ye'
-def ask_user(prompt):
-    """Asks the user to continue. return True if yes, else false"""
-    return input(str(prompt) + "(y/n)").lower() in YES_RESPONSE
-
-class InvalidDimensionsException(Exception):
-    pass
-
-def alter_tuple(tup, x=0.0, y=0.0):
-    return tup[0] + x, tup[1] + y
 
 class BoxBase(BoxBit):
     """The Base shape"""
@@ -368,7 +322,6 @@ class BoxBase(BoxBit):
             # give it 1 error on each side to allow pieces to fit together better
             point = alter_tuple(point, 0, -(notch_width / 2 - self.error))
             self.append(point)
-
 
 class BoxSide(BoxBit):
     """the two sides on left and right. The left bit is less big """
@@ -545,8 +498,21 @@ class BoxSide(BoxBit):
 
 
 
-MINIMUM_NOTCH_SIZE = 10
-SPACING = 5
+LAYER_NAME = "LINES"
+DXF_VERSION = "AC1027"
+DXF_ATTRIBS = {'color' : RED, 'line_weight': LINE_WEIGHT}
+LAYER_ATTRIBUTE = {'layer' : LAYER_NAME}
+YES_RESPONSE = 'y', 'yes', 'ye'
+
+def ask_user(prompt):
+    """Asks the user to continue. return True if yes, else false"""
+    return input(str(prompt) + "(y/n)").lower() in YES_RESPONSE
+
+class InvalidDimensionsException(Exception):
+    pass
+
+def alter_tuple(tup, x=0.0, y=0.0):
+    return tup[0] + x, tup[1] + y
 
 def get_max_notch(total_width, not_width, mat_thickness):
     """gets the maximum size of a notch"""
@@ -556,11 +522,28 @@ def get_max_notch(total_width, not_width, mat_thickness):
     # |                |
     return (total_width - 2 * mat_thickness) / (2 * not_width)
 
+def add_tuple(tup1, tup2):
+    return tuple(sum(x) for x in zip(tup1, tup2))
+
+def create_dxf_drawing():
+    dwg = ezdxf.new(DXF_VERSION)
+    dwg.layers.new(name=LAYER_NAME, dxfattribs=DXF_ATTRIBS)
+    return dwg
+
+def save_read_only(drawing, path='output.dxf'):
+    """Unread-only a file, then sets it to write and saves, then read-onlies it again"""
+    try:
+        os.chmod(path, stat.S_IWRITE)
+        drawing.saveas(path)
+        os.chmod(path, stat.S_IREAD)
+    except FileNotFoundError:
+        # file doesnt exist
+        drawing.saveas(path)
+
 def unittest():
     BoxBase(50, 2, 100, 2, 3).save('base.dxf')
     BoxSide(50, 2, 30, 1, 3, True).save('side1.dxf')
     BoxSide(100, 2, 30, 1, 3, True).save('side2.dxf')
-
 
 def test2():
     length = 100
@@ -602,10 +585,12 @@ def test2():
     save_read_only(dwg, 'test2.dxf')
 
 
-
-DB = True
 version = '0.2'
-#test2()
+# smallest length of a notch
+MINIMUM_NOTCH_SIZE = 10
+# spaces between each piece
+SPACING = 5
+
 def main():
     print("Box Creator - unstable prototype version {}".format(version))
     print()
@@ -680,7 +665,6 @@ def main():
 
     print()
     print("Drawing has been saved.")
-
 
 if __name__ == '__main__':
     main()
