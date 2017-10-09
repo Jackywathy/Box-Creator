@@ -1,5 +1,6 @@
 __author__ = 'Jack,Shovel&Archie. D. Comben project manger'
-"""V.0.2, stable basic version. Most features implemented."""
+__version__ = "v0.2"
+__doc__ = """{}, stable basic version. Most features implemented.""".format(__version__)
 
 # switched to ezdxf as it allows AC1027 dxf files
 import ezdxf
@@ -585,14 +586,13 @@ def test2():
     save_read_only(dwg, 'test2.dxf')
 
 
-version = '0.2'
 # smallest length of a notch
 MINIMUM_NOTCH_SIZE = 10
 # spaces between each piece
 SPACING = 5
 
 def main():
-    print("Box Creator - unstable prototype version {}".format(version))
+    print("Box Creator - version {}".format(__version__))
     print()
     name = input("What is your name? ")
     length = float(input("Box length: "))  # --- x
@@ -606,7 +606,7 @@ def main():
     print()
     print("In AutoCAD:")
     print(" - Zoom out")
-    print(" - Select By Layer and change line thickness to 0.00mm")
+    #print(" - Select By Layer and change line thickness to 0.00mm")
     print(" - Set laser specific settings through properties")
     print(" - Select ULS printer")
     print(" - Change units to mm")
